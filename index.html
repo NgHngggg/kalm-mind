@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Gõ Mõ Tụng Kinh Online</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Playfair+Display:ital,wght@0,500;0,700;1,400&family=Quicksand:wght@500;600&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+    }
+
+    body, html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: radial-gradient(circle at center, #241913 0%, #150f0c 60%, #0d0907 100%);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      align-items: center;
+      touch-action: manipulation;
+      font-family: 'Playfair Display', serif;
+      cursor: pointer;
+    }
+
+    /* Ambient glow in background */
+    .ambient-glow {
+      position: absolute;
+      width: 480px;
+      height: 480px;
+      background: radial-gradient(circle, rgba(220, 140, 50, 0.15) 0%, rgba(180, 80, 20, 0.05) 50%, transparent 75%);
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      transition: transform 0.2s ease, opacity 0.2s ease;
+      filter: blur(20px);
+    }
+
+    .ambient-glow.active {
+      transform: translate(-50%, -50%) scale(1.15);
+      opacity: 1;
+    }
+
+    /* Main Stage */
+    .stage {
+      flex: 1;
+      width: 100%;
+      max-width: 600px;
+      position: relative;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .temple-block-container {
+      position: relative;
+      width: 320px;
+      height: 320px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    /* Shockwave / Sound ripple */
+    .ripple-ring {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 60px;
+      height: 60px;
+      border: 2px solid rgba(245, 185, 95, 0.7);
+      border-radius: 50%;
+      transform: translate(-50%, -50%) scale(1);
+      opacity: 0;
+      pointer-events: none;
+      box-shadow: 0 0 15px rgba(245, 180, 90, 0.4);
+    }
+
+    .ripple-ring.animate {
+      animation: rippleEffect 0.55s cubic-bezier(0.1, 0.7, 0.3, 1) forwards;
+    }
+
+    @keyframes rippleEffect {
+      0% {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 0.9;
+        border-width: 3px;
+      }
+      100% {
+        transform: translate(-50%, -50%) scale(4.8);
+        opacity: 0;
+        border-width: 1px;
+      }
+    }
+
+    /* Wooden Fish (Mõ) */
+    .mo-wrapper {
+      position: relative;
+      width: 220px;
+      height: 180px;
+      z-index: 2;
+      transition: transform 0.08s cubic-bezier(0.3, 1.4, 0.6, 1);
+      filter: drop-shadow(0 15px 25px rgba(0, 0, 0, 0.65));
+      transform-origin: center bottom;
+    }
+
+    .mo-wrapper.hit {
+      transform: scale(0.96, 0.94) translateY(4px);
+    }
+
+    .mo-svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* Mallet (Dùi gõ) */
+    .dui-wrapper {
+      position: absolute;
+      width: 140px;
+      height: 140px;
+      top: 15px;
+      right: 10px;
+      z-index: 5;
+      transform-origin: 120px 20px; /* Pivot at the top-right handle */
+      transform: rotate(0deg);
+      pointer-events: none;
+      filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.5));
+    }
+
+    .dui-wrapper.strike {
+      animation: strikeAnim 0.16s cubic-bezier(0.25, 0.9, 0.35, 1.15) forwards;
+    }
+
+    @keyframes strikeAnim {
+      0% {
+        transform: rotate(0deg);
+      }
+      42% {
+        transform: rotate(-24deg) translate(-10px, 12px);
+      }
+      100% {
+        transform: rotate(0deg);
+      }
+    }
+
+    .dui-svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* Bottom footer text: thiện tâm thiện tâm */
+    .footer {
+      width: 100%;
+      text-align: center;
+      padding-bottom: 40px;
+      z-index: 10;
+    }
+
+    .footer-text {
+      font-family: 'Playfair Display', 'Times New Roman', serif;
+      font-size: 1.4rem;
+      letter-spacing: 5px;
+      color: #c99e6b;
+      opacity: 0.9;
+      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.7), 0 0 15px rgba(200, 145, 80, 0.25);
+      user-select: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="ambient-glow" id="ambientGlow"></div>
+
+  <div class="stage">
+    <div class="temple-block-container" id="templeBlockArea">
+      <!-- Ripple rings -->
+      <div class="ripple-ring" id="rippleRing"></div>
+
+      <!-- Wooden Fish (Mõ) -->
+      <div class="mo-wrapper" id="moWrapper">
+        <svg class="mo-svg" viewBox="0 0 300 240" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <!-- Radial and linear gradients for warm polished mahogany / sandalwood -->
+            <radialGradient id="moBodyGrad" cx="35%" cy="30%" r="70%">
+              <stop offset="0%" stop-color="#b6522c"/>
+              <stop offset="35%" stop-color="#8a3014"/>
+              <stop offset="70%" stop-color="#5a1c0b"/>
+              <stop offset="100%" stop-color="#340e05"/>
+            </radialGradient>
+
+            <linearGradient id="moHighlight" x1="20%" y1="0%" x2="80%" y2="100%">
+              <stop offset="0%" stop-color="#f8a065" stop-opacity="0.6"/>
+              <stop offset="40%" stop-color="#b6522c" stop-opacity="0"/>
+              <stop offset="100%" stop-color="#2a0a03" stop-opacity="0.8"/>
+            </linearGradient>
+
+            <linearGradient id="moRimGold" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#ffe394"/>
+              <stop offset="50%" stop-color="#ca8f34"/>
+              <stop offset="100%" stop-color="#7a4e12"/>
+            </linearGradient>
+
+            <radialGradient id="fishMouthGrad" cx="50%" cy="50%" r="60%">
+              <stop offset="0%" stop-color="#140603"/>
+              <stop offset="85%" stop-color="#200a05"/>
+              <stop offset="100%" stop-color="#46170c"/>
+            </radialGradient>
+
+            <filter id="innerGlow" x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur stdDeviation="3" result="blur"/>
+              <feComposite in2="SourceAlpha" operator="arithmetic" k2="-1" k3="1"/>
+            </filter>
+          </defs>
+
+          <!-- Shadow underneath -->
+          <ellipse cx="145" cy="215" rx="105" ry="18" fill="#0c0705" opacity="0.85"/>
+
+          <!-- Base Cushion Silhouette / Border glow -->
+          <ellipse cx="145" cy="205" rx="112" ry="16" fill="#7a240d" opacity="0.6"/>
+
+          <!-- Mõ Main Body -->
+          <path d="M 60 155 
+                   C 35 120, 40 70, 85 45 
+                   C 130 20, 205 25, 240 65 
+                   C 275 105, 265 160, 225 188 
+                   C 185 215, 95 210, 60 155 Z" 
+                fill="url(#moBodyGrad)" 
+                stroke="#641e0c" 
+                stroke-width="3"/>
+
+          <!-- Light Specular Sheen on Crown -->
+          <path d="M 80 55 
+                   C 115 32, 175 35, 215 65 
+                   C 185 48, 125 45, 80 55 Z" 
+                fill="#f59c5d" 
+                opacity="0.45"/>
+
+          <!-- Carved Decorative Fish Scales & Swirls -->
+          <!-- Cloud swirl 1 -->
+          <path d="M 120 70 
+                   C 145 60, 175 72, 168 95 
+                   C 162 112, 142 110, 138 98 
+                   C 134 86, 148 82, 153 88" 
+                fill="none" 
+                stroke="url(#moRimGold)" 
+                stroke-width="3" 
+                stroke-linecap="round" 
+                opacity="0.8"/>
+
+          <!-- Cloud swirl 2 -->
+          <path d="M 95 90 
+                   C 80 115, 95 145, 120 148 
+                   C 138 150, 146 135, 138 124 
+                   C 130 115, 116 122, 120 130" 
+                fill="none" 
+                stroke="url(#moRimGold)" 
+                stroke-width="2.8" 
+                stroke-linecap="round" 
+                opacity="0.75"/>
+
+          <!-- Tail/Handle Carved Knob on the left -->
+          <path d="M 65 145 
+                   C 45 155, 30 140, 32 120 
+                   C 34 102, 50 95, 66 102" 
+                fill="none" 
+                stroke="url(#moRimGold)" 
+                stroke-width="4.5" 
+                stroke-linecap="round" 
+                opacity="0.85"/>
+
+          <circle cx="38" cy="122" r="7" fill="url(#moRimGold)" opacity="0.9"/>
+
+          <!-- Resonance Cavity (The "Fish Mouth" opening) -->
+          <!-- Outer lip of mouth -->
+          <path d="M 130 175 
+                   C 170 178, 220 165, 248 135 
+                   C 252 142, 235 178, 185 188 
+                   C 150 195, 132 186, 130 175 Z" 
+                fill="#2b0a04" 
+                stroke="#170502" 
+                stroke-width="2"/>
+
+          <!-- Hollow internal opening -->
+          <path d="M 142 173 
+                   C 180 175, 224 160, 245 136 
+                   C 230 164, 188 178, 142 173 Z" 
+                fill="url(#fishMouthGrad)"/>
+
+          <!-- Round Sound Hole Eye -->
+          <ellipse cx="230" cy="120" rx="9" ry="12" fill="#1b0602" stroke="#5d1f0d" stroke-width="2"/>
+          <ellipse cx="231" cy="121" rx="6" ry="8" fill="#0d0301"/>
+
+          <!-- Strike impact point highlight (subtle warm spot) -->
+          <ellipse cx="178" cy="68" rx="22" ry="15" fill="#f8b072" opacity="0.25" filter="url(#innerGlow)"/>
+        </svg>
+      </div>
+
+      <!-- Mallet (Dùi Gõ) -->
+      <div class="dui-wrapper" id="duiWrapper">
+        <svg class="dui-svg" viewBox="0 0 160 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <!-- Wood gradient for mallet stick -->
+            <linearGradient id="stickGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#542511"/>
+              <stop offset="35%" stop-color="#8d431f"/>
+              <stop offset="70%" stop-color="#b6602e"/>
+              <stop offset="100%" stop-color="#4d220f"/>
+            </linearGradient>
+
+            <!-- Striker padded head gradient (brocade / leather cloth wrap) -->
+            <radialGradient id="headClothGrad" cx="35%" cy="35%" r="70%">
+              <stop offset="0%" stop-color="#e28c46"/>
+              <stop offset="40%" stop-color="#aa4f19"/>
+              <stop offset="85%" stop-color="#642407"/>
+              <stop offset="100%" stop-color="#320f02"/>
+            </radialGradient>
+
+            <linearGradient id="goldWrapBand" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="#7d5516"/>
+              <stop offset="50%" stop-color="#eec765"/>
+              <stop offset="100%" stop-color="#825a17"/>
+            </linearGradient>
+          </defs>
+
+          <!-- The Mallet Handle / Shaft -->
+          <!-- Angled from bottom-left to top-right -->
+          <path d="M 46 102 
+                   L 138 22 
+                   C 142 18, 148 24, 144 28 
+                   L 52 108 Z" 
+                fill="url(#stickGrad)"/>
+
+          <!-- Handle knob at the end -->
+          <ellipse cx="142" cy="24" rx="5" ry="6" transform="rotate(-40 142 24)" fill="#351407"/>
+
+          <!-- Golden binding thread / decorative band below striker head -->
+          <rect x="44" y="99" width="13" height="5" rx="2" transform="rotate(-40 44 99)" fill="url(#goldWrapBand)"/>
+
+          <!-- Mallet Head (Búp sen / Bọc dùi gõ tròn đầy đặn) -->
+          <ellipse cx="32" cy="118" rx="22" ry="19" transform="rotate(-38 32 118)" fill="url(#headClothGrad)"/>
+
+          <!-- Stitching / cloth folds on head -->
+          <path d="M 22 108 C 28 116, 38 124, 45 130" stroke="#ffd28d" stroke-width="1.8" opacity="0.6" stroke-linecap="round"/>
+          <path d="M 18 118 C 27 122, 38 123, 44 121" stroke="#f69947" stroke-width="1.4" opacity="0.5"/>
+
+          <!-- Head highlight -->
+          <ellipse cx="26" cy="112" rx="8" ry="6" fill="#f8b072" opacity="0.45"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer with single line: thiện tâm thiện tâm -->
+  <footer class="footer">
+    <div class="footer-text">thiện tâm thiện tâm</div>
+  </footer>
+
+  <script>
+    // Audio Synthesis for Realistic Wooden Fish (Mõ) Sound
+    let audioCtx = null;
+
+    function initAudioContext() {
+      if (!audioCtx) {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (AudioContextClass) {
+          audioCtx = new AudioContextClass();
+        }
+      }
+      if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+    }
+
+    /**
+     * Synthesizes an authentic acoustic wooden fish (mõ tụng kinh) strike:
+     * 1. Sharp wooden tap transient (filtered impulse burst)
+     * 2. Resonant hollow body pitch drop (~720Hz down to ~560Hz) with natural wooden acoustic damping
+     * 3. Secondary hollow overtone cavity resonance (~1250Hz & ~1800Hz)
+     */
+    function playMoSound() {
+      initAudioContext();
+      if (!audioCtx) return;
+
+      const now = audioCtx.currentTime;
+
+      // 1. Initial click / transient strike of mallet meeting wood
+      const clickLen = 0.018;
+      const bufferSize = Math.floor(audioCtx.sampleRate * clickLen);
+      const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        // High frequency filtered noise burst with steep envelope
+        data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.15));
+      }
+
+      const clickSource = audioCtx.createBufferSource();
+      clickSource.buffer = buffer;
+
+      const clickFilter = audioCtx.createBiquadFilter();
+      clickFilter.type = 'bandpass';
+      clickFilter.frequency.setValueAtTime(2200, now);
+      clickFilter.Q.setValueAtTime(2.5, now);
+
+      const clickGain = audioCtx.createGain();
+      clickGain.gain.setValueAtTime(0.85, now);
+      clickGain.gain.exponentialRampToValueAtTime(0.001, now + clickLen);
+
+      clickSource.connect(clickFilter);
+      clickFilter.connect(clickGain);
+      clickGain.connect(audioCtx.destination);
+      clickSource.start(now);
+
+      // 2. Main resonant body hollow tone (Fundamental with fast pitch drop)
+      const oscMain = audioCtx.createOscillator();
+      const gainMain = audioCtx.createGain();
+
+      oscMain.type = 'triangle';
+      // Pitch envelope: starting slightly higher on impact and immediately settling
+      oscMain.frequency.setValueAtTime(740, now);
+      oscMain.frequency.exponentialRampToValueAtTime(570, now + 0.045);
+
+      // Amplitude decay (exponential hollow wood reverberation)
+      gainMain.gain.setValueAtTime(0.95, now);
+      gainMain.gain.exponentialRampToValueAtTime(0.0001, now + 0.38);
+
+      // Bandpass filter to sculpt wooden hollow body
+      const bodyFilter = audioCtx.createBiquadFilter();
+      bodyFilter.type = 'bandpass';
+      bodyFilter.frequency.setValueAtTime(600, now);
+      bodyFilter.Q.setValueAtTime(4.2, now);
+
+      oscMain.connect(bodyFilter);
+      bodyFilter.connect(gainMain);
+      gainMain.connect(audioCtx.destination);
+
+      oscMain.start(now);
+      oscMain.stop(now + 0.4);
+
+      // 3. Secondary harmonic resonance
+      const oscHarmonic = audioCtx.createOscillator();
+      const gainHarmonic = audioCtx.createGain();
+
+      oscHarmonic.type = 'sine';
+      oscHarmonic.frequency.setValueAtTime(1180, now);
+      oscHarmonic.frequency.exponentialRampToValueAtTime(1020, now + 0.035);
+
+      gainHarmonic.gain.setValueAtTime(0.28, now);
+      gainHarmonic.gain.exponentialRampToValueAtTime(0.0001, now + 0.22);
+
+      oscHarmonic.connect(gainHarmonic);
+      gainHarmonic.connect(audioCtx.destination);
+
+      oscHarmonic.start(now);
+      oscHarmonic.stop(now + 0.25);
+
+      // 4. Low body mass resonance (gives authentic physical weight to the carved wood)
+      const oscLow = audioCtx.createOscillator();
+      const gainLow = audioCtx.createGain();
+
+      oscLow.type = 'sine';
+      oscLow.frequency.setValueAtTime(330, now);
+      oscLow.frequency.exponentialRampToValueAtTime(260, now + 0.04);
+
+      gainLow.gain.setValueAtTime(0.42, now);
+      gainLow.gain.exponentialRampToValueAtTime(0.0001, now + 0.18);
+
+      oscLow.connect(gainLow);
+      gainLow.connect(audioCtx.destination);
+
+      oscLow.start(now);
+      oscLow.stop(now + 0.2);
+    }
+
+    // UI Elements
+    const moWrapper = document.getElementById('moWrapper');
+    const duiWrapper = document.getElementById('duiWrapper');
+    const rippleRing = document.getElementById('rippleRing');
+    const ambientGlow = document.getElementById('ambientGlow');
+
+    function triggerKnock(e) {
+      if (e) {
+        // Prevent default touch zoom/scroll
+        if (e.cancelable) e.preventDefault();
+      }
+
+      // Play audio
+      playMoSound();
+
+      // Mallet animation: restart animation cleanly
+      duiWrapper.classList.remove('strike');
+      void duiWrapper.offsetWidth; // Trigger reflow
+      duiWrapper.classList.add('strike');
+
+      // Mõ squash/bounce effect timed right when the mallet hits (~55ms)
+      setTimeout(() => {
+        moWrapper.classList.remove('hit');
+        void moWrapper.offsetWidth;
+        moWrapper.classList.add('hit');
+
+        // Shockwave ripple
+        rippleRing.classList.remove('animate');
+        void rippleRing.offsetWidth;
+        rippleRing.classList.add('animate');
+
+        // Ambient glow bump
+        ambientGlow.classList.add('active');
+        setTimeout(() => ambientGlow.classList.remove('active'), 180);
+      }, 55);
+    }
+
+    // Listeners for entire document click or touch
+    window.addEventListener('pointerdown', (e) => {
+      triggerKnock(e);
+    }, { passive: false });
+
+    // Keyboard support: Space bar or Enter
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Space' || e.code === 'Enter') {
+        e.preventDefault();
+        triggerKnock();
+      }
+    });
+  </script>
+</body>
+</html>
